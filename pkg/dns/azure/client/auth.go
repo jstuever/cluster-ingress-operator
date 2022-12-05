@@ -35,14 +35,31 @@ func getAuthorizerForResource(config Config) (autorest.Authorizer, error) {
 			},
 		}
 	}
-	options := azidentity.ClientSecretCredentialOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: cloudConfig,
-		},
-	}
-	cred, err := azidentity.NewClientSecretCredential(config.TenantID, config.ClientID, config.ClientSecret, &options)
-	if err != nil {
-		return nil, err
+
+	var (
+		cred azcore.TokenCredential
+		err  error
+	)
+	if config.ClientSecret == "" {
+		options := azidentity.WorkloadIdentityCredentialOptions{
+			ClientOptions: azcore.ClientOptions{
+				Cloud: cloudConfig,
+			},
+		}
+		cred, err = azidentity.NewWorkloadIdentityCredential(config.TenantID, config.ClientID, "/var/run/secrets/openshift/serviceaccount/token", &options)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		options := azidentity.ClientSecretCredentialOptions{
+			ClientOptions: azcore.ClientOptions{
+				Cloud: cloudConfig,
+			},
+		}
+		cred, err = azidentity.NewClientSecretCredential(config.TenantID, config.ClientID, config.ClientSecret, &options)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	scope := endpointToScope(config.Environment.TokenAudience)
